@@ -751,6 +751,11 @@
 <!-- ===================== SCRIPT ===================== -->
 <script>
 const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbxnkW61m92wsr5keFBZjQk653SWJ0c3KP-QQfBfEa_wAnzUCQO9Mkk07qOKMo-5aOKa/exec";
+// Dipindah ke sini (dari posisi lama jauh di bawah): lapisan "smart" di bawah ini langsung
+// memanggil fetch() saat skrip di-parse (bukan cuma saat dipakai nanti), dan fetch tersebut
+// membaca CURRENT_USER di dalamnya -- kalau CURRENT_USER dideklarasikan pakai `let` di bawah
+// titik ini, JS akan error "Cannot access before initialization" (temporal dead zone).
+let CURRENT_USER=null,DATA_SISWA=[],ALL_DATES=[],PRESENSI_SAVED=false;
 
 // ============================================
 // LAPISAN "SMART": cache GET sisi klien, auto-sisip token/nip ke POST,
@@ -871,7 +876,6 @@ fetch(`${URL_APPS_SCRIPT}?action=getAppConfig`).then(r=>r.json()).then(res=>{
 // ============================================
 // GLOBALS
 // ============================================
-let CURRENT_USER=null,DATA_SISWA=[],ALL_DATES=[],PRESENSI_SAVED=false;
 let SETTING_KELAS=[],STATUS_DB={},isAdminMode=false,IS_BK_MODE=false;
 let dataSiswaAdmin={headers:[],rows:[]},dataGuruAdmin=[],dataJurnalAdmin=[],SEMUA_JURNAL_GURU=[];
 let DATA_SISWA_ADMIN_ABSEN=[];
