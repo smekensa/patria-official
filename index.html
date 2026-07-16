@@ -169,6 +169,7 @@
         <div class="header">
             <div><div class="guru-nama" id="disp-nama-guru"></div><div class="guru-nip" id="disp-nip-guru"></div></div>
             <div>
+                <button onclick="bukaMenuGuruTambahan()" title="Data Siswa, Rekap, dll" style="background:none;border:none;color:#475569;cursor:pointer;margin-right:15px;"><i class="fa-solid fa-bars fa-lg"></i></button>
                 <button onclick="document.getElementById('modalUbahPass').style.display='flex'" style="background:none;border:none;color:#0ea5e9;cursor:pointer;margin-right:15px;"><i class="fa-solid fa-key fa-lg"></i></button>
                 <button onclick="doLogout()" style="background:none;border:none;color:#ef4444;cursor:pointer;"><i class="fa-solid fa-right-from-bracket fa-lg"></i></button>
             </div>
@@ -180,7 +181,7 @@
                     <input type="hidden" id="single_mapel_val">
                     <div class="form-row">
                         <div class="form-group"><label>Kelas</label><select id="select_kelas" class="form-control" onchange="loadDataSiswa()"><option value="">-- Pilih --</option></select></div>
-                        <div class="form-group"><label>Tanggal</label><select id="tgl_absen" class="form-control" onchange="handleDateChange()"><option value="">Loading...</option></select></div>
+                        <div class="form-group"><label>Tanggal</label><select id="tgl_absen" class="form-control" onchange="handleTanggalDropdownChange('tgl_absen',loadDataSiswa)"><option value="">Loading...</option></select></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group" style="flex:2;"><label>Materi / Bab</label><input type="text" id="input_materi" class="form-control" placeholder="Contoh: Bab 1 Aljabar"></div>
@@ -288,6 +289,7 @@
                 <i class="fa-solid fa-bars"></i> <span class="menu-text">Menu Utama</span>
             </div>
             <ul class="sidebar-menu">
+                <li id="menu-kembali-guru" onclick="kembaliKeAbsensiGuru()" style="display:none;background:#0ea5e9;"><i class="fa-solid fa-arrow-left"></i><span class="menu-text">Kembali ke Absensi</span></li>
                 <li id="menu-dashboard" onclick="switchAdminPanel('panel-dashboard',this)" class="active"><i class="fa-solid fa-chart-pie"></i><span class="menu-text">Dashboard</span></li>
                 <li id="menu-bypass" onclick="switchAdminPanel('panel-absensi',this)"><i class="fa-solid fa-clipboard-user"></i><span class="menu-text">Bypass Absensi</span></li>
                 <li id="menu-absensi-bk" onclick="switchAdminPanel('panel-absensi',this)"><i class="fa-solid fa-clipboard-user"></i><span class="menu-text">Input Absensi</span></li>
@@ -349,13 +351,23 @@
                     <h3>Data Siswa</h3>
                     <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;align-items:center;">
                         <input type="text" id="searchSiswa" class="form-control" placeholder="Cari NIS/Nama..." onkeyup="searchSiswaDebounced()" style="width:200px;margin-top:0;">
-                        <input type="file" id="fileImportSiswa" accept=".xlsx" style="display:none;" onchange="importSiswa(event)">
-                        <button class="btn btn-warning btn-icon" onclick="document.getElementById('fileImportSiswa').click()"><i class="fa-solid fa-file-import"></i> Import XLSX</button>
-                        <button class="btn btn-success btn-icon" onclick="exportSiswaTemplate()"><i class="fa-solid fa-file-export"></i> Export XLSX</button>
-                        <button class="btn btn-primary btn-icon" onclick="naikKelasMassal()"><i class="fa-solid fa-arrow-up"></i> Naik Kelas</button>
-                        <button class="btn btn-info btn-icon" onclick="sinkronkanAbsensi()" title="Bangun ulang daftar absensi dari Data Siswa di atas. Otomatis jalan tiap import/edit, klik ini kalau perlu paksa ulang."><i class="fa-solid fa-rotate"></i> Sinkronkan ke Absensi</button>
+                        <div id="siswa-admin-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <input type="file" id="fileImportSiswa" accept=".xlsx" style="display:none;" onchange="importSiswa(event)">
+                            <button class="btn btn-warning btn-icon" onclick="document.getElementById('fileImportSiswa').click()"><i class="fa-solid fa-file-import"></i> Import XLSX</button>
+                            <button class="btn btn-success btn-icon" onclick="exportSiswaTemplate()"><i class="fa-solid fa-file-export"></i> Export XLSX</button>
+                            <button class="btn btn-primary btn-icon" onclick="naikKelasMassal()"><i class="fa-solid fa-arrow-up"></i> Naik Kelas</button>
+                            <button class="btn btn-info btn-icon" onclick="sinkronkanAbsensi()" title="Bangun ulang daftar absensi dari Data Siswa di atas. Otomatis jalan tiap import/edit, klik ini kalau perlu paksa ulang."><i class="fa-solid fa-rotate"></i> Sinkronkan ke Absensi</button>
+                        </div>
+                        <div id="siswa-bk-toolbar" style="display:none;gap:10px;flex-wrap:wrap;">
+                            <select id="filterTingkatBk" class="form-control" style="width:auto;margin-top:0;" onchange="filterSiswaBk()">
+                                <option value="">Semua Tingkat</option><option value="X">X</option><option value="XI">XI</option><option value="XII">XII</option>
+                            </select>
+                            <select id="filterJurusanBk" class="form-control" style="width:auto;margin-top:0;" onchange="filterSiswaBk()">
+                                <option value="">Semua Jurusan</option>
+                            </select>
+                        </div>
                     </div>
-                    <p style="font-size:.78rem;color:#64748b;margin:-8px 0 12px;">Data siswa di sini adalah SATU-SATUNYA sumber. Daftar absensi harian otomatis dibangun dari data ini setiap kali Import/Edit/Naik Kelas — tidak perlu isi dua tempat lagi.</p>
+                    <p id="siswa-admin-note" style="font-size:.78rem;color:#64748b;margin:-8px 0 12px;">Data siswa di sini adalah SATU-SATUNYA sumber. Daftar absensi harian otomatis dibangun dari data ini setiap kali Import/Edit/Naik Kelas — tidak perlu isi dua tempat lagi.</p>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                         <div><label style="font-size:.85rem;font-weight:bold;">Tampilkan: </label>
                             <select id="limitSiswa" onchange="changeLimitSiswa()" class="form-control" style="width:auto;display:inline-block;padding:4px;">
@@ -750,7 +762,7 @@
 
 <!-- ===================== SCRIPT ===================== -->
 <script>
-const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbw6sG9hizLC9ovIMtXk7U-RDjX0RefT_bqqzBv9SSlDNYJNchIGsWTS47IxOR2qzHEH/exec";
+const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbyAxL3IQ0rcG0veWkl-Cte_lXWQBt6A5iuf8ys3hdvHQJ61WRUwEKouYO7SQ8uGHQl6/exec";
 // Dipindah ke sini (dari posisi lama jauh di bawah): lapisan "smart" di bawah ini langsung
 // memanggil fetch() saat skrip di-parse (bukan cuma saat dipakai nanti), dan fetch tersebut
 // membaca CURRENT_USER di dalamnya -- kalau CURRENT_USER dideklarasikan pakai `let` di bawah
@@ -890,6 +902,60 @@ function toggleMainSidebar(){
     else if(window.innerWidth<=768)sb.classList.toggle('show-mobile');
     else sb.classList.toggle('minimized');
 }
+// ============================================
+// MENU TAMBAHAN GURU BIASA (burger ☰ di halaman absensi)
+// TIDAK menyentuh/mengubah form absensi (view-app) sama sekali -- cuma pindah tampilan
+// ke view-admin (dipakai bersama Admin/Kepsek/BK) dalam mode sidebar tersembunyi (seperti BK),
+// menampilkan panel read-only: Data Siswa, Rekap Siswa Aktif, Rekap Tidak Hadir, Rekap Absen Bulanan.
+// ============================================
+function bukaMenuGuruTambahan(){
+    document.getElementById("view-app").style.display="none";
+    document.getElementById("view-admin").style.display="block";
+    isAdminMode=false; IS_BK_MODE=true;
+
+    document.querySelectorAll("#sidebarMenu li").forEach(li=>li.style.display="none");
+    let mKembali=document.getElementById("menu-kembali-guru");
+    let mSiswa=document.getElementById("menu-siswa");
+    let mRekapDapodik2=document.getElementById("menu-rekap-dapodik2");
+    let mRTH=document.getElementById("menu-rekap-tidak-hadir");
+    let mRekap=document.getElementById("menu-rekap-absen");
+    [mKembali,mSiswa,mRekapDapodik2,mRTH,mRekap].forEach(m=>{if(m)m.style.display="flex";});
+
+    document.getElementById("menu-rekap-absen-text").textContent="Rekap Absen Bulanan";
+    document.getElementById("rekap-admin-view").style.display="block";
+    document.getElementById("rekap-kepsek-view").style.display="none";
+
+    document.getElementById("siswa-admin-toolbar").style.display="none";
+    document.getElementById("siswa-bk-toolbar").style.display="flex";
+    document.getElementById("siswa-admin-note").style.display="none";
+    loadFilterJurusanBk();
+
+    let sb=document.getElementById('sidebarMenu');
+    sb.classList.add('bk-mode');
+    document.getElementById('sidebarToggleBtn').style.display='none';
+    document.getElementById('bkBurgerBtn').classList.add('visible');
+
+    // Guru biasa (beda dari admin/kepsek/bk) tidak pernah lewat blok populate dropdown kelas
+    // di showApp() -- isi manual di sini supaya panel Rekap Absen Bulanan & Rekap Tidak Hadir jalan.
+    fetch(URL_APPS_SCRIPT+"?action=getClasses").then(r=>r.json()).then(res=>{
+        if(!res.classes)return;
+        let selRk=document.getElementById("rekapAdminKelas");
+        if(selRk){selRk.innerHTML='<option value="SEMUA">Semua Kelas</option>';res.classes.forEach(c=>{let o=document.createElement("option");o.value=c;o.text=c;selRk.add(o);});}
+        let sel=document.getElementById("rth-filter-kelas");
+        if(sel){sel.innerHTML='<option value="SEMUA">Semua Kelas</option>';res.classes.forEach(c=>{let o=document.createElement("option");o.value=c;o.text=c;sel.add(o);});}
+    });
+
+    switchAdminPanel('panel-siswa', mSiswa);
+    loadSiswaAdminPage();
+}
+function kembaliKeAbsensiGuru(){
+    document.getElementById("view-admin").style.display="none";
+    document.getElementById("view-app").style.display="block";
+    document.getElementById('bkBurgerBtn').classList.remove('visible');
+    document.getElementById('sidebarMenu').classList.remove('bk-mode','bk-expanded');
+    document.getElementById('sidebarToggleBtn').style.display='';
+}
+
 function toggleBkSidebar(){document.getElementById('sidebarMenu').classList.toggle('bk-expanded');}
 
 window.onload=function(){
@@ -986,13 +1052,15 @@ function showApp(){
         let mRekap=document.getElementById("menu-rekap-absen");
         let mRekapKelas=document.getElementById("menu-rekap-kelas");
         let mRekapDapodik=document.getElementById("menu-rekap-dapodik");
+        let mRekapDapodik2=document.getElementById("menu-rekap-dapodik2");
+        let mTampilan=document.getElementById("menu-tampilan");
 
         // Sembunyikan semua
-        [mBypass,mAbsenBk,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik].forEach(m=>{if(m)m.style.display="none";});
+        [mBypass,mAbsenBk,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik,mRekapDapodik2,mTampilan].forEach(m=>{if(m)m.style.display="none";});
 
         if(role==="admin"){
             IS_BK_MODE=false;
-            [mBypass,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik].forEach(m=>{if(m)m.style.display="flex";});
+            [mBypass,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik,mRekapDapodik2,mTampilan].forEach(m=>{if(m)m.style.display="flex";});
             document.getElementById("btn-upload-surat").style.display="flex";
             document.getElementById("rekap-admin-view").style.display="block";
             document.getElementById("rekap-absen-siswa-view").style.display="block";
@@ -1006,7 +1074,11 @@ function showApp(){
             setTimeout(()=>loadRekapSiswaAktif(),800);
         }else if(role==="guru bk"){
             IS_BK_MODE=true;
-            [mAbsenBk,mSiswa,mCek,mRTH].forEach(m=>{if(m)m.style.display="flex";});
+            [mAbsenBk,mSiswa,mCek,mRTH,mRekapDapodik2].forEach(m=>{if(m)m.style.display="flex";});
+            document.getElementById("siswa-admin-toolbar").style.display="none";
+            document.getElementById("siswa-bk-toolbar").style.display="flex";
+            document.getElementById("siswa-admin-note").style.display="none";
+            loadFilterJurusanBk();
             mDash.style.display="none";
             let sb=document.getElementById('sidebarMenu');
             sb.classList.add('bk-mode');
@@ -1087,7 +1159,7 @@ function injectAbsensiAdmin(){
         <div class="control-panel" style="margin-bottom:10px;">
             <div class="form-row">
                 <div class="form-group"><label>Kelas</label><select id="select_kelas_admin" class="form-control" onchange="loadDataSiswaAdmin()"><option value="">-- Pilih --</option></select></div>
-                <div class="form-group"><label>Tanggal</label><select id="tgl_absen_admin" class="form-control" onchange="loadDataSiswaAdmin()"><option value="">-- Pilih --</option></select></div>
+                <div class="form-group"><label>Tanggal</label><select id="tgl_absen_admin" class="form-control" onchange="handleTanggalDropdownChange('tgl_absen_admin',loadDataSiswaAdmin)"><option value="">-- Pilih --</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group" style="flex:2;"><label>Materi / Bab</label><input type="text" id="input_materi_admin" class="form-control" placeholder="Bab / Topik"></div>
@@ -1108,11 +1180,8 @@ function injectAbsensiAdmin(){
     });
     fetch(URL_APPS_SCRIPT+"?action=getDates").then(r=>r.json()).then(res=>{
         if(res.status!=='success')return;
-        let sel=document.getElementById("tgl_absen_admin");if(!sel)return;
-        const NB=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"];
-        let dates=res.dates.map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(d)};});
-        dates.sort((a,b)=>b.obj-a.obj);
-        dates.forEach(d=>{let o=document.createElement("option");o.value=d.val;o.text=d.txt;sel.add(o);});
+        ALL_DATES=res.dates;
+        isiDropdownTanggal("tgl_absen_admin", loadDataSiswaAdmin, true);
     });
 }
 
@@ -1277,22 +1346,56 @@ function loadDaftarKelas(){
         res.classes.forEach(c=>{let o=document.createElement("option");o.value=c;o.text=c;sel.add(o);});
     });
 }
-function loadDaftarTanggal(){
-    fetch(URL_APPS_SCRIPT+"?action=getDates").then(r=>r.json()).then(res=>{if(res.status==='success'){ALL_DATES=res.dates;renderDropdownTanggal(false);}});
-}
-function renderDropdownTanggal(showAll){
-    let sel=document.getElementById("tgl_absen");if(!sel)return;
-    sel.innerHTML='<option value="">-- Pilih --</option>';
+// ============================================
+// DROPDOWN TANGGAL (dipakai bersama guru & admin bypass): tampil 5 terbaru dulu,
+// tombol "Tampilkan 5 Lagi" di bawah nambah 5 per klik, dan otomatis pilih HARI INI
+// (atau tanggal efektif terdekat sebelum hari ini kalau hari ini bukan hari efektif).
+// ============================================
+let TANGGAL_DROPDOWN_STATE={};
+function isiDropdownTanggal(selectId, onSelectFn, autoSelectToday){
+    let sel=document.getElementById(selectId);if(!sel)return;
     const NB=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"];
-    let dO=ALL_DATES.map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(d)};});
+    let dO=(ALL_DATES||[]).map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(d)};});
     dO.sort((a,b)=>b.obj-a.obj);
-    let today=new Date();today.setHours(0,0,0,0);let rec=[],old=[];
-    dO.forEach(item=>{let diff=Math.floor((today-item.obj)/(1000*60*60*24));if(diff<=7&&diff>=-1)rec.push(item);else old.push(item);});
-    if(rec.length>0){let g=document.createElement("optgroup");g.label="Terbaru";rec.forEach(d=>{let o=document.createElement("option");o.value=d.val;o.text=d.txt;g.appendChild(o);});sel.appendChild(g);}
-    if(showAll&&old.length>0){let cg=null,cm="";old.forEach(item=>{let label=NB[item.obj.getMonth()]+" "+item.obj.getFullYear();if(label!==cm){cm=label;cg=document.createElement("optgroup");cg.label=label;sel.appendChild(cg);}let o=document.createElement("option");o.value=item.val;o.text=item.txt;cg.appendChild(o);});}
-    else if(old.length>0){let o=document.createElement("option");o.value="SHOW_ALL";o.text="📂 Tampilkan Hari Lampau...";sel.add(o);}
+    TANGGAL_DROPDOWN_STATE[selectId]={all:dO,shown:5};
+    renderDropdownTanggalBertahap(selectId);
+    if(autoSelectToday && dO.length>0){
+        let now=new Date();now.setHours(0,0,0,0);
+        let todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        let match=dO.find(d=>d.val===todayStr) || dO.find(d=>d.obj<=now) || dO[0];
+        if(match){
+            // pastikan tanggal terpilih ada di daftar yang lagi ditampilkan (kalau bukan salah satu dari 5 terbaru, tetap tampilkan 5 terbaru + sisipkan)
+            let idxInAll=dO.findIndex(d=>d.val===match.val);
+            if(idxInAll>=TANGGAL_DROPDOWN_STATE[selectId].shown){TANGGAL_DROPDOWN_STATE[selectId].shown=idxInAll+1;renderDropdownTanggalBertahap(selectId);}
+            sel.value=match.val;
+            if(onSelectFn)onSelectFn();
+        }
+    }
 }
-function handleDateChange(){let sel=document.getElementById("tgl_absen");if(sel.value==="SHOW_ALL"){renderDropdownTanggal(true);sel.focus();}else loadDataSiswa();}
+function renderDropdownTanggalBertahap(selectId){
+    let sel=document.getElementById(selectId);if(!sel)return;
+    let state=TANGGAL_DROPDOWN_STATE[selectId];if(!state)return;
+    let currentVal=sel.value;
+    sel.innerHTML='<option value="">-- Pilih --</option>';
+    state.all.slice(0,state.shown).forEach(d=>{let o=document.createElement("option");o.value=d.val;o.text=d.txt;sel.appendChild(o);});
+    if(state.shown<state.all.length){
+        let sisa=state.all.length-state.shown;
+        let o=document.createElement("option");o.value="__MORE__";o.text=`⬇️ Tampilkan 5 Lagi (${sisa} sisa)`;sel.appendChild(o);
+    }
+    if(currentVal&&currentVal!=="__MORE__")sel.value=currentVal;
+}
+function handleTanggalDropdownChange(selectId, onSelectFn){
+    let sel=document.getElementById(selectId);
+    if(sel.value==="__MORE__"){
+        TANGGAL_DROPDOWN_STATE[selectId].shown+=5;
+        renderDropdownTanggalBertahap(selectId);
+        sel.focus();
+    }else if(onSelectFn)onSelectFn();
+}
+
+function loadDaftarTanggal(){
+    fetch(URL_APPS_SCRIPT+"?action=getDates").then(r=>r.json()).then(res=>{if(res.status==='success'){ALL_DATES=res.dates;isiDropdownTanggal("tgl_absen",loadDataSiswa,true);}});
+}
 
 // ============================================
 // ABSENSI GURU BIASA
@@ -1623,9 +1726,33 @@ function changeLimitSiswa(){itemsPerPageSiswa=parseInt(document.getElementById("
 function prevPageSiswa(){if(currentPageSiswa>1){currentPageSiswa--;loadSiswaAdminPage();}}
 function nextPageSiswa(){let maxP=Math.ceil(totalSiswaFiltered/itemsPerPageSiswa)||1;if(currentPageSiswa<maxP){currentPageSiswa++;loadSiswaAdminPage();}}
 function searchSiswaDebounced(){clearTimeout(searchSiswaTimeout);searchSiswaTimeout=setTimeout(()=>{currentPageSiswa=1;loadSiswaAdminPage();},350);}
+// Ambil "Tingkat" (X/XI/XII) dan "Jurusan" dari string kelas, misal "X DPIB 2" -> {tingkat:"X", jurusan:"DPIB"}
+function parseKelasTJ(kelas){
+    let k=String(kelas||"").trim();
+    let m=k.match(/^(XII|XI|X)\s+(.+)$/i);
+    if(!m)return{tingkat:"",jurusan:k};
+    let tingkat=m[1].toUpperCase();
+    let sisa=m[2].trim();
+    let m2=sisa.match(/^(.*?)\s*\d+$/); // buang nomor rombel di akhir (mis. "DPIB 2" -> "DPIB")
+    let jurusan=m2?m2[1].trim():sisa;
+    return{tingkat:tingkat,jurusan:jurusan};
+}
+function loadFilterJurusanBk(){
+    fetch(URL_APPS_SCRIPT+"?action=getClasses").then(r=>r.json()).then(res=>{
+        if(res.status!=='success')return;
+        let jurusanSet=new Set();
+        (res.classes||[]).forEach(k=>{let p=parseKelasTJ(k);if(p.jurusan)jurusanSet.add(p.jurusan);});
+        let selJ=document.getElementById("filterJurusanBk");
+        if(selJ)selJ.innerHTML='<option value="">Semua Jurusan</option>'+[...jurusanSet].sort().map(j=>`<option value="${j}">${j}</option>`).join('');
+    });
+}
+function filterSiswaBk(){currentPageSiswa=1;loadSiswaAdminPage();}
+
 function loadSiswaAdminPage(){
     let search=document.getElementById("searchSiswa")?.value.trim()||"";
-    fetch(URL_APPS_SCRIPT+`?action=getSiswaAdmin&page=${currentPageSiswa}&limit=${itemsPerPageSiswa}&search=${encodeURIComponent(search)}`)
+    let tingkat=document.getElementById("filterTingkatBk")?.value||"";
+    let jurusan=document.getElementById("filterJurusanBk")?.value||"";
+    fetch(URL_APPS_SCRIPT+`?action=getSiswaAdmin&page=${currentPageSiswa}&limit=${itemsPerPageSiswa}&search=${encodeURIComponent(search)}&tingkat=${encodeURIComponent(tingkat)}&jurusan=${encodeURIComponent(jurusan)}`)
     .then(r=>r.json()).then(res=>{
         if(res.status!=='success')return;
         dataSiswaAdmin={headers:res.headers||[],rows:res.data||[]};
@@ -1650,7 +1777,7 @@ function renderTableSiswa(){
         else if(hh.includes("tempat")&&hh.includes("lahir"))iTl=i;
         else if((hh.includes("tgl")||hh.includes("tanggal"))&&hh.includes("lahir"))iTg=i;
         else if(hh==="l/p"||hh==="jenis kelamin"||hh==="gender")iLp=i;
-        else if(hh.includes("orang tua")||hh.includes("ortu")||hh.includes("ayah")||hh.includes("wali"))iOrtu=i;
+        else if(hh.includes("orangtua")||hh.includes("orang tua")||hh.includes("ortu")||hh.includes("ayah")||hh.includes("wali"))iOrtu=i;
         else if(hh.includes("alamat")||hh.includes("address"))iAlmt=i;
     }
     let rows=dataSiswaAdmin.rows||[];
