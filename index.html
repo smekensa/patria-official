@@ -177,8 +177,7 @@
         <div id="full-absensi-wrapper">
             <div id="core-absensi-app">
                 <div class="control-panel">
-                    <div class="form-group" id="container-mapel" style="display:none;"><label>Pilih Mata Pelajaran</label><select id="select_mapel" class="form-control"></select></div>
-                    <input type="hidden" id="single_mapel_val">
+                    <div class="form-group" id="container-mapel"><label>Mata Pelajaran</label><select id="select_mapel" class="form-control"></select></div>
                     <div class="form-row">
                         <div class="form-group"><label>Kelas</label><select id="select_kelas" class="form-control" onchange="loadDataSiswa()"><option value="">-- Pilih --</option></select></div>
                         <div class="form-group"><label>Tanggal</label><select id="tgl_absen" class="form-control" onchange="handleTanggalDropdownChange('tgl_absen',loadDataSiswa)"><option value="">Loading...</option></select></div>
@@ -305,6 +304,7 @@
                 <li id="menu-rekap-tidak-hadir" onclick="switchAdminPanel('panel-rekap-tidak-hadir',this);loadRekapTidakHadir()"><i class="fa-solid fa-user-xmark"></i><span class="menu-text">Rekap Tidak Hadir</span></li>
                 <li id="menu-tanggal" onclick="switchAdminPanel('panel-tanggal',this);loadCutOffToForm();loadKalenderTahunan()"><i class="fa-solid fa-calendar"></i><span class="menu-text">Tanggal &amp; Backup</span></li>
                 <li id="menu-tampilan" onclick="switchAdminPanel('panel-tampilan',this);loadTampilanConfig()"><i class="fa-solid fa-palette"></i><span class="menu-text">Tampilan Aplikasi</span></li>
+                <li id="menu-surat-kolektif" onclick="switchAdminPanel('panel-surat-kolektif',this);loadSuratKolektifPanel()"><i class="fa-solid fa-users-rectangle"></i><span class="menu-text">Surat Kolektif</span></li>
             </ul>
         </div>
 
@@ -755,6 +755,62 @@
                     <button class="btn btn-success btn-icon" style="width:100%;padding:12px;" onclick="simpanTampilanConfig()"><i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan Tampilan</button>
                 </div>
 
+                <!-- SURAT KOLEKTIF -->
+                <div id="panel-surat-kolektif" class="admin-panel">
+                    <h3>Surat Kolektif</h3>
+                    <p style="font-size:.82rem;color:#64748b;margin-top:-6px;">Untuk surat yang isinya tabel banyak siswa sekaligus (mis. surat rekomendasi lomba). Template berupa Spreadsheet dengan sel penanda <code>{{TABEL}}</code> dan placeholder <code>{{APAPUN}}</code> untuk info surat.</p>
+
+                    <div style="border:1px solid #ddd;padding:15px;border-radius:8px;margin-bottom:15px;">
+                        <label style="font-weight:700;display:block;margin-bottom:8px;">1. Pilih Template</label>
+                        <select id="skTemplate" class="form-control"><option value="">-- Pilih Template Kolektif --</option></select>
+                    </div>
+
+                    <div style="border:1px solid #ddd;padding:15px;border-radius:8px;margin-bottom:15px;">
+                        <label style="font-weight:700;display:block;margin-bottom:8px;">2. Info Surat (isi placeholder <code>{{...}}</code> di template)</label>
+                        <div id="skFieldList"></div>
+                        <button class="btn btn-secondary btn-icon" style="margin-top:6px;" onclick="skTambahField()"><i class="fa-solid fa-plus"></i> Tambah Field</button>
+                    </div>
+
+                    <div style="border:1px solid #ddd;padding:15px;border-radius:8px;margin-bottom:15px;">
+                        <label style="font-weight:700;display:block;margin-bottom:8px;">3. Pilih Kolom Tabel Siswa</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;" id="skKolomStandar">
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="NO" checked> No</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="NIS" checked> NIS</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="NAMA" checked> Nama</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="KELAS" checked> Kelas</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="NISN"> NISN</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="TTL"> TTL</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="L/P"> L/P</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="ALAMAT"> Alamat</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-weight:400;"><input type="checkbox" value="NAMA ORANGTUA"> Nama Orangtua</label>
+                        </div>
+                        <label style="font-size:.85rem;font-weight:600;">Kolom tambahan (diisi manual per siswa, mis. Prestasi, Keterangan):</label>
+                        <div id="skKolomCustomList" style="margin:6px 0;"></div>
+                        <div style="display:flex;gap:8px;">
+                            <input type="text" id="skInputKolomCustom" class="form-control" placeholder="Nama kolom baru, mis. Prestasi" style="margin-top:0;">
+                            <button class="btn btn-secondary btn-icon" onclick="skTambahKolomCustom()"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+
+                    <div style="border:1px solid #ddd;padding:15px;border-radius:8px;margin-bottom:15px;">
+                        <label style="font-weight:700;display:block;margin-bottom:8px;">4. Pilih Siswa</label>
+                        <input type="text" id="skSearchSiswa" class="form-control" placeholder="Cari NIS/Nama..." onkeyup="skSearchDebounced()" style="margin-bottom:10px;">
+                        <div class="table-container" style="max-height:300px;overflow-y:auto;">
+                            <table class="status-table"><thead><tr><th></th><th>NIS</th><th>Nama</th><th>Kelas</th></tr></thead><tbody id="skTbodyCari"></tbody></table>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0;">
+                            <button class="btn btn-secondary btn-icon" onclick="skPrevPage()"><i class="fa-solid fa-chevron-left"></i></button>
+                            <span id="skPageInfo" style="font-size:.85rem;">1/1</span>
+                            <button class="btn btn-secondary btn-icon" onclick="skNextPage()"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <label style="font-weight:700;display:block;margin:14px 0 6px;">Siswa Terpilih (<span id="skJumlahTerpilih">0</span>)</label>
+                        <div id="skChipTerpilih" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+                        <div id="skCustomInputArea"></div>
+                    </div>
+
+                    <button class="btn btn-success btn-icon" style="width:100%;padding:12px;" onclick="skGenerate()"><i class="fa-solid fa-file-export"></i> Buat Surat Kolektif</button>
+                </div>
+
             </div>
         </div>
     </div>
@@ -762,7 +818,7 @@
 
 <!-- ===================== SCRIPT ===================== -->
 <script>
-const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbyAxL3IQ0rcG0veWkl-Cte_lXWQBt6A5iuf8ys3hdvHQJ61WRUwEKouYO7SQ8uGHQl6/exec";
+const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbyI1N9JpXTwTtgf5bynxEaXFmgVVDetofJP8051v-YPQhikj_Y308zgb86SG9lw7M35/exec";
 // Dipindah ke sini (dari posisi lama jauh di bawah): lapisan "smart" di bawah ini langsung
 // memanggil fetch() saat skrip di-parse (bukan cuma saat dipakai nanti), dan fetch tersebut
 // membaca CURRENT_USER di dalamnya -- kalau CURRENT_USER dideklarasikan pakai `let` di bawah
@@ -1054,13 +1110,14 @@ function showApp(){
         let mRekapDapodik=document.getElementById("menu-rekap-dapodik");
         let mRekapDapodik2=document.getElementById("menu-rekap-dapodik2");
         let mTampilan=document.getElementById("menu-tampilan");
+        let mSuratKolektif=document.getElementById("menu-surat-kolektif");
 
         // Sembunyikan semua
-        [mBypass,mAbsenBk,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik,mRekapDapodik2,mTampilan].forEach(m=>{if(m)m.style.display="none";});
+        [mBypass,mAbsenBk,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik,mRekapDapodik2,mTampilan,mSuratKolektif].forEach(m=>{if(m)m.style.display="none";});
 
         if(role==="admin"){
             IS_BK_MODE=false;
-            [mBypass,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik,mRekapDapodik2,mTampilan].forEach(m=>{if(m)m.style.display="flex";});
+            [mBypass,mSiswa,mGuru,mTgl,mGenS,mRkS,mRTH,mCek,mRekap,mRekapKelas,mRekapDapodik,mRekapDapodik2,mTampilan,mSuratKolektif].forEach(m=>{if(m)m.style.display="flex";});
             document.getElementById("btn-upload-surat").style.display="flex";
             document.getElementById("rekap-admin-view").style.display="block";
             document.getElementById("rekap-absen-siswa-view").style.display="block";
@@ -1074,7 +1131,10 @@ function showApp(){
             setTimeout(()=>loadRekapSiswaAktif(),800);
         }else if(role==="guru bk"){
             IS_BK_MODE=true;
-            [mAbsenBk,mSiswa,mCek,mRTH,mRekapDapodik2].forEach(m=>{if(m)m.style.display="flex";});
+            [mAbsenBk,mSiswa,mCek,mRTH,mRekapDapodik2,mRekap].forEach(m=>{if(m)m.style.display="flex";});
+            document.getElementById("menu-rekap-absen-text").textContent="Rekap Absen Bulanan";
+            document.getElementById("rekap-admin-view").style.display="block";
+            document.getElementById("rekap-kepsek-view").style.display="none";
             document.getElementById("siswa-admin-toolbar").style.display="none";
             document.getElementById("siswa-bk-toolbar").style.display="flex";
             document.getElementById("siswa-admin-note").style.display="none";
@@ -1101,8 +1161,9 @@ function showApp(){
         // Set mapel guru
         let mapelArr=CURRENT_USER.mapel?CURRENT_USER.mapel.split(/[,،]/).map(m=>m.trim()).filter(Boolean):[];
         let selM=document.getElementById("select_mapel");
-        if(mapelArr.length>1){document.getElementById("container-mapel").style.display="block";selM.innerHTML="";mapelArr.forEach(m=>{let o=document.createElement("option");o.value=m;o.text=m;selM.add(o);});}
-        else{document.getElementById("single_mapel_val").value=mapelArr[0]||"";}
+        selM.innerHTML="";
+        if(mapelArr.length===0){selM.innerHTML='<option value="">-- Belum ada mapel diatur --</option>';selM.disabled=true;}
+        else{mapelArr.forEach(m=>{let o=document.createElement("option");o.value=m;o.text=m;selM.add(o);});selM.disabled=(mapelArr.length===1);}
 
         initAdminData();
         loadDaftarKelas();
@@ -1118,8 +1179,9 @@ function showApp(){
         // Set mapel
         let mapelArr=CURRENT_USER.mapel?CURRENT_USER.mapel.split(/[,،]/).map(m=>m.trim()).filter(Boolean):[];
         let selM=document.getElementById("select_mapel");
-        if(mapelArr.length>1){document.getElementById("container-mapel").style.display="block";selM.innerHTML="";mapelArr.forEach(m=>{let o=document.createElement("option");o.value=m;o.text=m;selM.add(o);});}
-        else{document.getElementById("single_mapel_val").value=mapelArr[0]||"";}
+        selM.innerHTML="";
+        if(mapelArr.length===0){selM.innerHTML='<option value="">-- Belum ada mapel diatur --</option>';selM.disabled=true;}
+        else{mapelArr.forEach(m=>{let o=document.createElement("option");o.value=m;o.text=m;selM.add(o);});selM.disabled=(mapelArr.length===1);}
 
         loadDaftarKelas();loadDaftarTanggal();
     }
@@ -1355,7 +1417,9 @@ let TANGGAL_DROPDOWN_STATE={};
 function isiDropdownTanggal(selectId, onSelectFn, autoSelectToday){
     let sel=document.getElementById(selectId);if(!sel)return;
     const NB=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"];
-    let dO=(ALL_DATES||[]).map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(d)};});
+    let today=new Date();today.setHours(0,0,0,0);
+    let dO=(ALL_DATES||[]).map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(d)};})
+        .filter(d=>d.obj<=today); // Kunci: tanggal besok/masa depan tidak boleh dipilih untuk isi absen
     dO.sort((a,b)=>b.obj-a.obj);
     TANGGAL_DROPDOWN_STATE[selectId]={all:dO,shown:5};
     renderDropdownTanggalBertahap(selectId);
@@ -1605,7 +1669,7 @@ function simpanAbsen(){
     let dataAbsen=[];
     DATA_SISWA.forEach((s,i)=>{let r=document.querySelector(`input[name="st_${i}"]:checked`);if(r)dataAbsen.push({nis:s.nis,nama:s.nama,status:r.value});});
 
-    let mapelEl=document.getElementById("container-mapel").style.display!=="none"?document.getElementById("select_mapel"):document.getElementById("single_mapel_val");
+    let mapelEl=document.getElementById("select_mapel");
     let payloadSave={action:"save",kelas:kelas,tanggal:tanggal,data:JSON.stringify(dataAbsen),
         nama_guru:CURRENT_USER.nama,nip_guru:CURRENT_USER.nip,
         mapel:mapelEl?mapelEl.value:"",jam:document.getElementById("input_jam")?.value||"",
@@ -3432,6 +3496,134 @@ async function importKalenderExcel(e){
     r.readAsArrayBuffer(file);
 }
 function backupDatabase(){loading(true,"Membackup...");fetch(URL_APPS_SCRIPT,{method:"POST",body:JSON.stringify({action:"backupDatabase"})}).then(r=>r.json()).then(res=>{loading(false);swal("Berhasil",res.message,"success");});}
+
+// ============================================
+// SURAT KOLEKTIF — 1 surat berisi tabel banyak siswa (rekomendasi lomba, dsb)
+// ============================================
+let SK_FIELDS=[], SK_KOLOM_CUSTOM=[], SK_TERPILIH={}, SK_CUSTOM_VALUES={};
+let skCurrentPage=1, skTotal=0, skSearchTimeout=null;
+
+function loadSuratKolektifPanel(){
+    fetch(URL_APPS_SCRIPT+"?action=getTemplates").then(r=>r.json()).then(res=>{
+        let sel=document.getElementById("skTemplate");
+        sel.innerHTML='<option value="">-- Pilih Template Kolektif --</option>';
+        (res.data||[]).filter(t=>t.tipe==="Kolektif").forEach(t=>{let o=document.createElement("option");o.value=t.fileId;o.text=t.nama;sel.appendChild(o);});
+        if(sel.options.length===1)sel.innerHTML+='<option value="" disabled>(Belum ada template kolektif -- tambahkan di sheet Templates, kolom Tipe="Kolektif")</option>';
+    });
+    if(SK_FIELDS.length===0)SK_FIELDS=[{key:"NAMA_EVENT",value:""},{key:"WAKTU_EVENT",value:""},{key:"TEMPAT_EVENT",value:""}];
+    renderSkFieldList();
+    renderSkKolomCustomList();
+    skCurrentPage=1;
+    skLoadSearch();
+    renderSkChips();
+}
+function renderSkFieldList(){
+    document.getElementById("skFieldList").innerHTML=SK_FIELDS.map((f,i)=>`
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <input type="text" class="form-control" style="margin-top:0;width:35%;" placeholder="NAMA_FIELD" value="${(f.key||'').replace(/"/g,'&quot;')}" onchange="SK_FIELDS[${i}].key=this.value.toUpperCase().replace(/[^A-Z0-9_]/g,'_')">
+            <input type="text" class="form-control" style="margin-top:0;flex:1;" placeholder="Isinya..." value="${(f.value||'').replace(/"/g,'&quot;')}" onchange="SK_FIELDS[${i}].value=this.value">
+            <button class="btn btn-danger btn-icon" style="padding:6px 10px;" onclick="skHapusField(${i})"><i class="fa-solid fa-xmark"></i></button>
+        </div>`).join('');
+}
+function skTambahField(){SK_FIELDS.push({key:"",value:""});renderSkFieldList();}
+function skHapusField(i){SK_FIELDS.splice(i,1);renderSkFieldList();}
+
+function renderSkKolomCustomList(){
+    document.getElementById("skKolomCustomList").innerHTML=SK_KOLOM_CUSTOM.map((k,i)=>
+        `<span style="display:inline-flex;align-items:center;gap:4px;background:#e2e8f0;padding:4px 10px;border-radius:14px;font-size:.82rem;margin:3px;">${k} <i class="fa-solid fa-xmark" style="cursor:pointer;color:#dc2626;" onclick="skHapusKolomCustom(${i})"></i></span>`
+    ).join('');
+}
+function skTambahKolomCustom(){
+    let inp=document.getElementById("skInputKolomCustom");
+    let v=inp.value.trim();
+    if(!v)return;
+    if(SK_KOLOM_CUSTOM.includes(v))return swal("Info","Kolom itu sudah ada.","info");
+    SK_KOLOM_CUSTOM.push(v);
+    inp.value="";
+    renderSkKolomCustomList();
+    renderSkCustomInputArea();
+}
+function skHapusKolomCustom(i){
+    let removed=SK_KOLOM_CUSTOM.splice(i,1)[0];
+    Object.values(SK_CUSTOM_VALUES).forEach(v=>{delete v[removed];});
+    renderSkKolomCustomList();
+    renderSkCustomInputArea();
+}
+
+function skSearchDebounced(){clearTimeout(skSearchTimeout);skSearchTimeout=setTimeout(()=>{skCurrentPage=1;skLoadSearch();},350);}
+function skLoadSearch(){
+    let search=document.getElementById("skSearchSiswa")?.value.trim()||"";
+    fetch(URL_APPS_SCRIPT+`?action=getSiswaAdmin&page=${skCurrentPage}&limit=10&search=${encodeURIComponent(search)}`).then(r=>r.json()).then(res=>{
+        if(res.status!=='success')return;
+        skTotal=res.total||0;
+        let h=res.headers||[];
+        let iNis=1,iNama=2,iKelas=3;
+        let tbody=document.getElementById("skTbodyCari");
+        tbody.innerHTML=(res.data||[]).map(r=>{
+            let nis=String(r[iNis]);
+            let checked=SK_TERPILIH[nis]?"checked":"";
+            return `<tr><td><input type="checkbox" ${checked} onchange="skToggleSiswa('${nis}','${String(r[iNama]).replace(/'/g,"\\'")}','${String(r[iKelas]).replace(/'/g,"\\'")}',this.checked)"></td><td>${nis}</td><td style="text-align:left;">${r[iNama]}</td><td>${r[iKelas]}</td></tr>`;
+        }).join('') || '<tr><td colspan="4" style="text-align:center;color:#64748b;">Tidak ada data</td></tr>';
+        let maxP=Math.ceil(skTotal/10)||1;
+        document.getElementById("skPageInfo").innerText=`${skCurrentPage}/${maxP}`;
+    });
+}
+function skPrevPage(){if(skCurrentPage>1){skCurrentPage--;skLoadSearch();}}
+function skNextPage(){let maxP=Math.ceil(skTotal/10)||1;if(skCurrentPage<maxP){skCurrentPage++;skLoadSearch();}}
+
+function skToggleSiswa(nis,nama,kelas,checked){
+    if(checked){SK_TERPILIH[nis]={nis,nama,kelas};if(!SK_CUSTOM_VALUES[nis])SK_CUSTOM_VALUES[nis]={};}
+    else{delete SK_TERPILIH[nis];delete SK_CUSTOM_VALUES[nis];}
+    renderSkChips();
+    renderSkCustomInputArea();
+}
+function skHapusSiswa(nis){delete SK_TERPILIH[nis];delete SK_CUSTOM_VALUES[nis];renderSkChips();renderSkCustomInputArea();skLoadSearch();}
+function renderSkChips(){
+    let list=Object.values(SK_TERPILIH);
+    document.getElementById("skJumlahTerpilih").innerText=list.length;
+    document.getElementById("skChipTerpilih").innerHTML=list.map(s=>
+        `<span style="display:inline-flex;align-items:center;gap:6px;background:#dbeafe;color:#1e40af;padding:5px 12px;border-radius:14px;font-size:.82rem;">${s.nama} (${s.kelas}) <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="skHapusSiswa('${s.nis}')"></i></span>`
+    ).join('') || '<span style="color:#64748b;font-size:.85rem;">Belum ada siswa dipilih.</span>';
+}
+function renderSkCustomInputArea(){
+    let area=document.getElementById("skCustomInputArea");
+    let siswaList=Object.values(SK_TERPILIH);
+    if(SK_KOLOM_CUSTOM.length===0||siswaList.length===0){area.innerHTML="";return;}
+    let html=`<label style="font-weight:700;display:block;margin:10px 0 6px;">Isi Kolom Tambahan per Siswa</label>
+        <div class="table-container" style="max-height:260px;overflow-y:auto;"><table class="status-table"><thead><tr><th>Nama</th>${SK_KOLOM_CUSTOM.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
+    siswaList.forEach(s=>{
+        html+=`<tr><td style="text-align:left;font-weight:600;">${s.nama}</td>`;
+        SK_KOLOM_CUSTOM.forEach(k=>{
+            let val=(SK_CUSTOM_VALUES[s.nis]&&SK_CUSTOM_VALUES[s.nis][k])||"";
+            html+=`<td><input type="text" class="form-control" style="margin-top:0;min-width:120px;" value="${val.replace(/"/g,'&quot;')}" onchange="SK_CUSTOM_VALUES['${s.nis}']['${k}']=this.value"></td>`;
+        });
+        html+=`</tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    area.innerHTML=html;
+}
+
+function skGenerate(){
+    let idTemplate=document.getElementById("skTemplate").value;
+    if(!idTemplate)return swal("Error","Pilih template dulu.","warning");
+    let siswaList=Object.values(SK_TERPILIH);
+    if(siswaList.length===0)return swal("Error","Pilih minimal 1 siswa.","warning");
+    let kolom=[...document.querySelectorAll("#skKolomStandar input:checked")].map(c=>c.value).concat(SK_KOLOM_CUSTOM);
+    if(kolom.length===0)return swal("Error","Pilih minimal 1 kolom tabel.","warning");
+    let payload={
+        action:"generateSuratKolektif",
+        idTemplate, namaSurat:"Surat Kolektif",
+        fields: SK_FIELDS.filter(f=>f.key),
+        kolom,
+        siswa: siswaList.map(s=>({nis:s.nis, customValues: SK_CUSTOM_VALUES[s.nis]||{}}))
+    };
+    loading(true,"Membuat surat kolektif...");
+    fetch(URL_APPS_SCRIPT,{method:"POST",body:JSON.stringify(payload)}).then(r=>r.json()).then(res=>{
+        loading(false);
+        if(res.status==='success')swal("Berhasil",res.message,"success").then(()=>window.open(res.url,"_blank"));
+        else swal("Gagal",res.message,"error");
+    }).catch(()=>{loading(false);swal("Error","Gagal koneksi ke server","error");});
+}
 
 // ============================================
 // TAMPILAN APLIKASI: background + transparansi + favicon (setting sekolah, berlaku semua orang)
