@@ -1418,7 +1418,7 @@ function isiDropdownTanggal(selectId, onSelectFn, autoSelectToday){
     let sel=document.getElementById(selectId);if(!sel)return;
     const NB=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"];
     let today=new Date();today.setHours(0,0,0,0);
-    let dO=(ALL_DATES||[]).map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(d)};})
+    let dO=(ALL_DATES||[]).map(d=>{let p=d.split("-");return{val:d,txt:`${p[2]} ${NB[parseInt(p[1])-1]} ${p[0]}`,obj:new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]))};})
         .filter(d=>d.obj<=today); // Kunci: tanggal besok/masa depan tidak boleh dipilih untuk isi absen
     dO.sort((a,b)=>b.obj-a.obj);
     TANGGAL_DROPDOWN_STATE[selectId]={all:dO,shown:5};
