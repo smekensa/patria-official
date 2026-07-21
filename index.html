@@ -818,7 +818,7 @@
 
 <!-- ===================== SCRIPT ===================== -->
 <script>
-const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbyI1N9JpXTwTtgf5bynxEaXFmgVVDetofJP8051v-YPQhikj_Y308zgb86SG9lw7M35/exec";
+const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbxJbs_giJ1x_QqGydfaDpYXISrDJgeUD5nNyDXKeceKjoAFXujQT0IxVKxF9jNRWctA/exec";
 // Dipindah ke sini (dari posisi lama jauh di bawah): lapisan "smart" di bawah ini langsung
 // memanggil fetch() saat skrip di-parse (bukan cuma saat dipakai nanti), dan fetch tersebut
 // membaca CURRENT_USER di dalamnya -- kalau CURRENT_USER dideklarasikan pakai `let` di bawah
@@ -1458,7 +1458,12 @@ function handleTanggalDropdownChange(selectId, onSelectFn){
 }
 
 function loadDaftarTanggal(){
-    fetch(URL_APPS_SCRIPT+"?action=getDates").then(r=>r.json()).then(res=>{if(res.status==='success'){ALL_DATES=res.dates;isiDropdownTanggal("tgl_absen",loadDataSiswa,true);}});
+    fetch(URL_APPS_SCRIPT+"?action=getDates").then(r=>r.json()).then(res=>{
+        if(res.status!=='success')return;
+        ALL_DATES=res.dates;
+        isiDropdownTanggal("tgl_absen",loadDataSiswa,true);
+        if(document.getElementById("tgl_absen_admin"))isiDropdownTanggal("tgl_absen_admin",loadDataSiswaAdmin,true);
+    });
 }
 
 // ============================================
