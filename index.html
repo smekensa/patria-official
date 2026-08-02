@@ -229,6 +229,22 @@
     </div>
 </div>
 
+<!-- ========== MODAL EDIT LINK BUKTI (Rekap Tidak Hadir) ========== -->
+<div id="modalEditLinkRTH" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:12px;padding:20px;width:92%;max-width:420px;">
+        <h3 style="margin-top:0;">Perbaiki Link Bukti</h3>
+        <p id="rthEditNamaSiswa" style="color:#475569;margin-top:-8px;"></p>
+        <label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:4px;">Tempel Link (kalau sudah ada file di Drive)</label>
+        <input type="text" id="rthEditUrlInput" class="form-control" placeholder="https://drive.google.com/..." style="margin-bottom:14px;">
+        <label style="font-size:.85rem;font-weight:600;display:block;margin-bottom:4px;">Atau Upload File Baru</label>
+        <input type="file" id="rthEditFileInput" accept="image/*,application/pdf" class="form-control" style="margin-bottom:14px;">
+        <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-icon" style="flex:1;padding:10px;" onclick="simpanEditLinkRTH()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+            <button class="btn btn-secondary btn-icon" style="padding:10px 20px;" onclick="document.getElementById('modalEditLinkRTH').style.display='none';">Batal</button>
+        </div>
+    </div>
+</div>
+
 <!-- ========== MODAL UBAH PASSWORD ========== -->
 <div id="modalUbahPass" class="modal-overlay">
     <div class="modal-box" style="max-width:400px;">
@@ -818,12 +834,13 @@
 
 <!-- ===================== SCRIPT ===================== -->
 <script>
-const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbxJbs_giJ1x_QqGydfaDpYXISrDJgeUD5nNyDXKeceKjoAFXujQT0IxVKxF9jNRWctA/exec";
+const URL_APPS_SCRIPT="https://script.google.com/macros/s/AKfycbzziYAtcAMRg0ywXvVeCFhbgn1l9ADxVxzT4jRZmT3OBlsAU1ljNx4RKrbinC_824JK/exec";
 // Dipindah ke sini (dari posisi lama jauh di bawah): lapisan "smart" di bawah ini langsung
 // memanggil fetch() saat skrip di-parse (bukan cuma saat dipakai nanti), dan fetch tersebut
 // membaca CURRENT_USER di dalamnya -- kalau CURRENT_USER dideklarasikan pakai `let` di bawah
 // titik ini, JS akan error "Cannot access before initialization" (temporal dead zone).
 let CURRENT_USER=null,DATA_SISWA=[],ALL_DATES=[],PRESENSI_SAVED=false;
+let MY_DEVICE_TOKEN=null; // token perangkat, ditangkap SEKALI ke memori (bukan baca localStorage berulang -- lebih stabil)
 
 // ============================================
 // LAPISAN "SMART": cache GET sisi klien, auto-sisip token/nip ke POST,
@@ -857,7 +874,7 @@ window.fetch = function(url, options){
                 let action = urlObj.searchParams.get("action");
                 if(SENSITIVE_GET_ACTIONS.indexOf(action) !== -1){
                     urlObj.searchParams.set("nip", CURRENT_USER.nip);
-                    urlObj.searchParams.set("token", localStorage.getItem("device_id")||"");
+                    urlObj.searchParams.set("token", MY_DEVICE_TOKEN||localStorage.getItem("device_id")||"");
                     url = urlObj.toString();
                 }
             }catch(e){}
@@ -880,7 +897,7 @@ window.fetch = function(url, options){
         try{
             const body = JSON.parse(options.body);
             if(!body.nip)   body.nip   = CURRENT_USER.nip;
-            if(!body.token) body.token = localStorage.getItem("device_id") || "";
+            if(!body.token) body.token = MY_DEVICE_TOKEN || localStorage.getItem("device_id") || "";
             options.body = JSON.stringify(body);
         }catch(e){ /* body bukan JSON (FormData dsb), biarkan apa adanya */ }
     }
@@ -1027,7 +1044,7 @@ window.onload=function(){
 
     const sNip=localStorage.getItem("guru_nip");
     const sData=JSON.parse(localStorage.getItem("guru_data")||"null");
-    if(sNip&&sData){CURRENT_USER=sData;showApp();}
+    if(sNip&&sData){CURRENT_USER=sData;MY_DEVICE_TOKEN=localStorage.getItem("device_id")||null;showApp();}
 
     document.getElementById("login-nip").addEventListener("keypress",e=>{if(e.key==="Enter")doLogin();});
     document.getElementById("login-pin").addEventListener("keypress",e=>{if(e.key==="Enter")doLogin();});
@@ -1045,6 +1062,7 @@ function doLogin(){
     // Generate token perangkat
     let deviceId=localStorage.getItem("device_id");
     if(!deviceId){deviceId=Date.now().toString(36)+Math.random().toString(36).substring(2,8);localStorage.setItem("device_id",deviceId);}
+    MY_DEVICE_TOKEN=deviceId;
 
     loading(true,"Memverifikasi...");
     // Gunakan timeout 15 detik untuk login cepat
@@ -1545,16 +1563,27 @@ function hapusPreviewBukti(){
 // kegagalan ditampilkan jelas + ada tombol Coba Lagi (tanpa perlu upload ulang filenya).
 // ============================================
 let PENDING_BUKTI_RETRY = {};
-function simpanLinkBukti(nis, tgl, nama, url, fileId, idx, isAdmin){
+function simpanLinkBukti(nis, tgl, nama, url, fileId, idx, isAdmin, percobaan){
+    percobaan = percobaan || 1;
     let key = (isAdmin?'a':'g')+'_'+idx;
     PENDING_BUKTI_RETRY[key] = {nis,tgl,nama,url,fileId,idx,isAdmin};
     let sd = document.getElementById(isAdmin?`upload-status-adm-${idx}`:`upload-status-${idx}`);
     fetch(URL_APPS_SCRIPT,{method:"POST",body:JSON.stringify({action:"saveBuktiSurat",nis:nis,tanggal:tgl,nama:nama,url:url,fileId:fileId||""})})
     .then(r=>r.json()).then(res=>{
-        if(res.status==='success'){ delete PENDING_BUKTI_RETRY[key]; }
-        else if(sd) sd.innerHTML += `<div class="bukti-warn" style="color:#dc2626;margin-top:4px;font-size:.75rem;">⚠️ File terupload tapi link GAGAL tersimpan (${res.message||'error'}). <button onclick="retryBukti('${key}')" class="btn btn-danger btn-icon" style="padding:2px 8px;font-size:.7rem;margin-top:2px;">Coba Lagi</button></div>`;
+        if(res.status==='success'){ delete PENDING_BUKTI_RETRY[key]; return; }
+        // Retry otomatis dulu (sampai 3x, jeda makin lama) sebelum minta guru klik apa-apa --
+        // error sesi/koneksi seringnya cuma sesaat, jadi kemungkinan besar berhasil sendiri.
+        if(percobaan < 3){
+            setTimeout(()=>simpanLinkBukti(nis,tgl,nama,url,fileId,idx,isAdmin,percobaan+1), percobaan*1500);
+        } else if(sd){
+            sd.innerHTML += `<div class="bukti-warn" style="color:#dc2626;margin-top:4px;font-size:.75rem;">⚠️ File terupload tapi link GAGAL tersimpan setelah 3x percobaan (${res.message||'error'}). <button onclick="retryBukti('${key}')" class="btn btn-danger btn-icon" style="padding:2px 8px;font-size:.7rem;margin-top:2px;">Coba Lagi</button></div>`;
+        }
     }).catch(()=>{
-        if(sd) sd.innerHTML += `<div class="bukti-warn" style="color:#dc2626;margin-top:4px;font-size:.75rem;">⚠️ Gagal koneksi saat simpan link. <button onclick="retryBukti('${key}')" class="btn btn-danger btn-icon" style="padding:2px 8px;font-size:.7rem;margin-top:2px;">Coba Lagi</button></div>`;
+        if(percobaan < 3){
+            setTimeout(()=>simpanLinkBukti(nis,tgl,nama,url,fileId,idx,isAdmin,percobaan+1), percobaan*1500);
+        } else if(sd){
+            sd.innerHTML += `<div class="bukti-warn" style="color:#dc2626;margin-top:4px;font-size:.75rem;">⚠️ Gagal koneksi saat simpan link (sudah dicoba 3x). <button onclick="retryBukti('${key}')" class="btn btn-danger btn-icon" style="padding:2px 8px;font-size:.7rem;margin-top:2px;">Coba Lagi</button></div>`;
+        }
     });
 }
 function retryBukti(key){
@@ -1670,6 +1699,15 @@ function simpanAbsen(){
         }
     });
     if(belumUpload.length){swal("Peringatan","Wajib upload bukti untuk: "+belumUpload.join(", "),"warning");return;}
+
+    // Bukti surat sudah keupload tapi LINK-nya masih dalam proses simpan/retry ke server
+    // (lihat simpanLinkBukti) -- kalau dipaksa lanjut sekarang, linknya bisa gagal permanen
+    // tanpa guru sadar. Suruh tunggu sebentar dulu.
+    let pendingKeys=Object.keys(PENDING_BUKTI_RETRY).filter(k=>k.startsWith('g_'));
+    if(pendingKeys.length){
+        swal("Tunggu Sebentar","Ada "+pendingKeys.length+" link bukti surat masih diproses/dicoba ulang ke server. Tunggu beberapa detik lalu klik Simpan Presensi lagi.","info");
+        return;
+    }
 
     let dataAbsen=[];
     DATA_SISWA.forEach((s,i)=>{let r=document.querySelector(`input[name="st_${i}"]:checked`);if(r)dataAbsen.push({nis:s.nis,nama:s.nama,status:r.value});});
@@ -2102,12 +2140,59 @@ function renderRekapTidakHadir(){
     tbody.innerHTML=pageData.map((row,i)=>{
         let c=BC[row.status]||"#64748b";let l=LS[row.status]||row.status;
         let badge=`<span style="display:inline-block;padding:3px 9px;border-radius:5px;font-weight:bold;font-size:.82rem;color:white;background:${c};">${row.status} - ${l}</span>`;
-        let buktiCell=row.urlBukti?`<a href="${row.urlBukti}" target="_blank" class="btn btn-info btn-icon" style="padding:4px 8px;font-size:.8rem;"><i class="fa-solid fa-file-lines"></i> Lihat</a>`:`<span style="color:#94a3b8;font-size:.8rem;">-</span>`;
+        let buktiCell=(row.urlBukti?`<a href="${row.urlBukti}" target="_blank" class="btn btn-info btn-icon" style="padding:4px 8px;font-size:.8rem;"><i class="fa-solid fa-file-lines"></i> Lihat</a>`:`<span style="color:#94a3b8;font-size:.8rem;">-</span>`)+` <button onclick="bukaEditLinkRTH(${start+i})" class="btn btn-secondary btn-icon" style="padding:4px 8px;font-size:.8rem;" title="Tambah/perbaiki link bukti"><i class="fa-solid fa-pen"></i></button>`;
         return`<tr><td>${start+i+1}</td><td style="text-align:left;font-weight:600;">${row.nama||'-'}</td><td>${row.kelas||'-'}</td><td>${badge}</td><td>${row.tanggal||'-'}</td><td>${buktiCell}</td></tr>`;
     }).join('');
 }
 function rthPrevPage(){if(rthCurrentPage>1){rthCurrentPage--;renderRekapTidakHadir();}}
 function rthNextPage(){let max=Math.ceil(rthDataFiltered.length/RTH_PAGE_SIZE)||1;if(rthCurrentPage<max){rthCurrentPage++;renderRekapTidakHadir();}}
+
+let rthEditIdx=null;
+function bukaEditLinkRTH(idx){
+    rthEditIdx=idx;
+    let row=rthDataFiltered[idx];
+    if(!row)return;
+    document.getElementById("rthEditNamaSiswa").innerText=`${row.nama} — ${row.kelas} — ${row.tanggal}`;
+    document.getElementById("rthEditUrlInput").value=row.urlBukti||"";
+    document.getElementById("rthEditFileInput").value="";
+    document.getElementById("modalEditLinkRTH").style.display="flex";
+}
+function simpanEditLinkRTH(){
+    let row=rthDataFiltered[rthEditIdx];
+    if(!row)return;
+    let file=document.getElementById("rthEditFileInput").files[0];
+    let urlManual=document.getElementById("rthEditUrlInput").value.trim();
+
+    if(file){
+        let r=new FileReader();
+        r.onload=function(ev){
+            loading(true,"Mengupload...");
+            fetch(URL_APPS_SCRIPT,{method:"POST",body:JSON.stringify({action:"uploadBuktiSurat",fileName:file.name,fileData:ev.target.result,kelas:row.kelas})})
+            .then(r=>r.json()).then(res=>{
+                loading(false);
+                if(res.status!=='success')return swal("Gagal",res.message||"Upload gagal","error");
+                simpanLinkBuktiRTH(row, res.url, res.fileId);
+            }).catch(()=>{loading(false);swal("Error","Gagal koneksi","error");});
+        };
+        r.readAsDataURL(file);
+    }else if(urlManual){
+        simpanLinkBuktiRTH(row, urlManual, "");
+    }else{
+        swal("Info","Isi link atau pilih file dulu.","info");
+    }
+}
+function simpanLinkBuktiRTH(row, url, fileId){
+    loading(true,"Menyimpan link...");
+    fetch(URL_APPS_SCRIPT,{method:"POST",body:JSON.stringify({action:"saveBuktiSurat",nis:row.nis,tanggal:row.tanggal,nama:row.nama,url:url,fileId:fileId||""})})
+    .then(r=>r.json()).then(res=>{
+        loading(false);
+        if(res.status!=='success')return swal("Gagal",res.message,"error");
+        row.urlBukti=url;
+        renderRekapTidakHadir();
+        document.getElementById("modalEditLinkRTH").style.display="none";
+        swal("Berhasil","Link bukti tersimpan.","success");
+    }).catch(()=>{loading(false);swal("Error","Gagal koneksi","error");});
+}
 function exportRekapTidakHadir(){
     if(!rthDataFiltered.length)return swal("Info","Tidak ada data untuk diexport.","info");
     let wsData=[["No","Nama Siswa","Kelas","Status","Tanggal","Link Bukti"]];
